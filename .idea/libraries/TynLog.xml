@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="TynLog">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/TynLog.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
