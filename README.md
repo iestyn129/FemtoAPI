@@ -1,5 +1,5 @@
 # FemtoAPI
-A super tiny and super simple HTTP server designed for only basic needs of me (iestyn129).
+A super tiny and super simple HTTP server and API framework designed for only basic needs of me (iestyn129).
 
 ## Issues and Contribution
 If you want to create issues or pull requests be my guest, but expect nothing from them. Yet again,
