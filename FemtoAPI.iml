@@ -12,5 +12,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="KotlinJavaRuntime" level="project" />
     <orderEntry type="library" name="TynLog" level="project" />
+    <orderEntry type="library" name="jetbrains.kotlin.reflect" level="project" />
   </component>
 </module>
