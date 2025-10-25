@@ -1,4 +1,4 @@
-package dev.iestyn129.femtoapi.response
+package dev.iestyn129.femtoapi
 
 enum class StatusCode(val code: Int) {
 	Continue(100),
@@ -100,7 +100,7 @@ enum class StatusCode(val code: Int) {
 		fun fromCode(code: Int): StatusCode? = entries.find { code == it.code }
 	}
 
-	override fun toString(): String = when(this) {
+	override fun toString(): String = "$code ${when(this) {
 		Continue -> "Continue"
 		SwitchingProtocols -> "Switching Protocols"
 		Processing -> "Processing"
@@ -195,5 +195,5 @@ enum class StatusCode(val code: Int) {
 		UnauthorizedCloudFront -> "Unauthorized (CloudFront)"
 		NetworkReadTimeoutError -> "Network Read Timeout Error"
 		NetworkConnectTimeoutError -> "Network Connect Timeout Error"
-	}
+	} }"
 }

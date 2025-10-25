@@ -1,9 +1,8 @@
 package dev.iestyn129.femtoapi
 
-import dev.iestyn129.femtoapi.api.URIMap
-import dev.iestyn129.femtoapi.response.HTTPResponse
-import dev.iestyn129.femtoapi.response.IResponse
-import dev.iestyn129.femtoapi.response.StatusCode
+import dev.iestyn129.femtoapi.api.EndpointHandler
+import dev.iestyn129.femtoapi.api.response.EmptyResponse
+import dev.iestyn129.femtoapi.api.response.IResponse
 import dev.iestyn129.tynlog.TynLog
 import java.io.Closeable
 import java.io.InputStream
@@ -16,6 +15,7 @@ import java.net.URI
 import kotlin.concurrent.thread
 
 private const val DEFAULT_PORT: Int = 8080
+const val FEMTO_API_VERSION: String = "0.1.0"
 
 open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 	constructor(host: String, port: Int) : this(InetSocketAddress(host, port))
@@ -27,7 +27,7 @@ open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 	constructor() : this(InetSocketAddress(DEFAULT_PORT))
 
 	private val serverSocket: ServerSocket = ServerSocket()
-	private val uriMap: URIMap = URIMap(this)
+	private val endpointHandler: EndpointHandler = EndpointHandler(this)
 
 	fun start() {
 		TynLog.info("Running FemtoAPI at http://${hostname.hostName}:${hostname.port}")
@@ -37,46 +37,70 @@ open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 			val client: Socket = serverSocket.accept()
 			val input: InputStream = client.getInputStream()
 			val output: OutputStream = client.getOutputStream()
+			TynLog.debug()
+
+			val startTime: Long = System.currentTimeMillis()
 
 			try {
-				val response: HTTPResponse = try {
-					val statusLine: String = input.readLine()
-						?: throw HTTPException("Input stream is empty")
-					val status: List<String> = statusLine.split(" ", limit = 3)
-					if (status.size != 3) throw HTTPException("Unknown HTTP request: \"$statusLine\"")
+				var method: Method? = null
+				var uri: URI? = null
+				var protocol: String? = null
 
-					val method: Method? = Method.fromString(status[0].uppercase())
-					val uri: URI = URI(status[1].ifBlank { "/" })
-					val protocol: String = status[2]
+				val response: IResponse = try {
+					val statusLine: String = input.readLine() ?: throw HTTPException(
+						"Input stream is empty",
+						StatusCode.BadRequest
+					)
+
+					val status: List<String> = statusLine.split(" ", limit = 3)
+					if (status.size != 3) throw HTTPException(
+						"Invalid HTTP status line: '$statusLine'",
+						StatusCode.BadRequest
+					)
+
+					method = Method.fromString(status[0].uppercase())
+					uri = URI(status[1].ifBlank { "/" })
+					protocol = status[2]
 
 					if (method == null) throw HTTPException(
-						"Unknown HTTP protocol: \"$protocol\"",
+						"Unknown HTTP method: '$protocol'",
 						StatusCode.MethodNotAllowed
 					)
 
-					if (protocol != HTTP_1_1)
-						throw HTTPException("Unsupported HTTP protocol: \"$protocol\"")
+					if (protocol != HTTP_1_1) throw HTTPException(
+						"Unsupported HTTP protocol: '$protocol'",
+						StatusCode.HTTPVersionNotSupported
+					)
 
-					TynLog.debug("$method at $uri over $protocol")
+					val response: Any = endpointHandler.get(method, uri.path)?.call(
+						this,
+						HTTPSession(uri, method, protocol, input)
+					) ?: throw HTTPException(
+						"URI '${uri.path}' not found",
+						StatusCode.NotFound
+					)
 
-					val session: HTTPSession = HTTPSession(uri, method, protocol, input)
-					val response: Any = uriMap.get(method, session.baseURI)?.call(this, session)
-						?: throw HTTPException("URI \"$uri\" not found", StatusCode.NotFound)
+					response as? IResponse ?: throw HTTPException(
+						"Endpoint handler returned an invalid type: $response",
+						StatusCode.InternalServerError
+					)
 
-					when (response) {
-						is HTTPResponse -> response
-						is IResponse -> response.toHTTPResponse()
-						else -> throw HTTPException(
-							"Endpoint handler returned an invalid type: $response",
-							StatusCode.InternalServerError
-						)
-					}
+					response
 				} catch (e: HTTPException) {
 					TynLog.error(e)
-					HTTPResponse(e.code)
+					EmptyResponse(e.code)
 				}
 
-				response.send(output)
+				val httpResponse: HTTPResponse = HTTPResponse(protocol ?: HTTP_1_1, response)
+
+				TynLog.info(
+					"${client.inetAddress.hostAddress}:${client.port} - " +
+					"${httpResponse.protocol} - " +
+					"$method '${uri?.path}' ${httpResponse.code} - " +
+					"${System.currentTimeMillis() - startTime}ms"
+				)
+
+				httpResponse.send(output)
 			} catch (e: Exception) {
 				TynLog.error("Unknown error ($e) occurred when communicating with $client")
 			} finally {
@@ -86,9 +110,13 @@ open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 			}
 		} catch (e: SocketException) {
 			if (!serverSocket.isClosed) throw e
-			TynLog.info("FemtoAPI socket has closed")
 		} } }
 	}
 
-	override fun close() = serverSocket.safeClose()
+	fun stop() = close()
+
+	override fun close() {
+		serverSocket.safeClose()
+		TynLog.info("FemtoAPI has stopped.")
+	}
 }

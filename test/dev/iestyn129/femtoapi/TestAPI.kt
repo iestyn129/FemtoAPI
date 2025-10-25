@@ -1,11 +1,11 @@
 package dev.iestyn129.femtoapi
 
-import dev.iestyn129.femtoapi.api.methods.GET
-import dev.iestyn129.femtoapi.response.HTMLResponse
-import dev.iestyn129.femtoapi.response.IResponse
-import dev.iestyn129.femtoapi.response.JSONResponse
-import dev.iestyn129.femtoapi.response.StatusCode
-import dev.iestyn129.femtoapi.response.TextResponse
+import dev.iestyn129.femtoapi.api.GET
+import dev.iestyn129.femtoapi.api.POST
+import dev.iestyn129.femtoapi.api.response.HTMLResponse
+import dev.iestyn129.femtoapi.api.response.IResponse
+import dev.iestyn129.femtoapi.api.response.JSONResponse
+import dev.iestyn129.femtoapi.api.response.TextResponse
 import dev.iestyn129.tynlog.LogFolderConfig
 import dev.iestyn129.tynlog.TynConfig
 import dev.iestyn129.tynlog.TynLog
@@ -19,19 +19,33 @@ class TestAPI() : FemtoAPI("127.0.0.1") {
 		"The method you're using is ${session.method}."
 	)
 
-	@GET("/penis")
-	fun penis(session: HTTPSession): IResponse = HTMLResponse(
+	@GET("/html")
+	fun html(session: HTTPSession): IResponse = HTMLResponse(
 		StatusCode.OK,
 		"<html>" +
 		"<body>" +
-		"	<h1>penis</h1>" +
+		"	<h1>HEADER!!!</h1>" +
 		"</body>"
 	)
 
 	@GET("/json")
+	@POST("/json")
+	@GET("/iestyn129")
 	fun json(session: HTTPSession): IResponse = JSONResponse(
 		StatusCode.OK,
 		"{\"iestyn129\": true}"
+	)
+
+	@GET("/?")
+	fun questionMark(session: HTTPSession): IResponse = TextResponse(
+		StatusCode.OK,
+		"?"
+	)
+
+	@GET("/()")
+	fun `()`(session: HTTPSession): IResponse = TextResponse(
+		StatusCode.OK,
+		"They're called parentheses, MOM!"
 	)
 }
 
@@ -43,5 +57,9 @@ fun main() {
 		)
 	))
 
-	TestAPI().start()
+	val api: TestAPI = TestAPI()
+	api.start()
+	Runtime.getRuntime().addShutdownHook(Thread {
+		api.stop()
+	})
 }

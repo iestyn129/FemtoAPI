@@ -11,7 +11,6 @@ data class HTTPSession(
 ) {
 	private val headers: Headers = Headers()
 	private val content: ByteArray
-	val baseURI: String = uri.path
 	val query: Map<String, String> = uri.query?.split("&")?.mapNotNull {
 		val parts: List<String> = it.split('=', limit = 2)
 		if (parts.size < 2) null else parts[0] to parts[1]

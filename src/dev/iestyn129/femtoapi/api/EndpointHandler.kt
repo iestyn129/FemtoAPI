@@ -3,20 +3,10 @@ package dev.iestyn129.femtoapi.api
 import dev.iestyn129.femtoapi.FemtoAPI
 import dev.iestyn129.femtoapi.HTTPSession
 import dev.iestyn129.femtoapi.Method
-import dev.iestyn129.femtoapi.api.methods.CONNECT
-import dev.iestyn129.femtoapi.api.methods.DELETE
-import dev.iestyn129.femtoapi.api.methods.GET
-import dev.iestyn129.femtoapi.api.methods.HEAD
-import dev.iestyn129.femtoapi.api.methods.OPTIONS
-import dev.iestyn129.femtoapi.api.methods.PATCH
-import dev.iestyn129.femtoapi.api.methods.POST
-import dev.iestyn129.femtoapi.api.methods.TRACE
-import dev.iestyn129.femtoapi.response.HTTPResponse
-import dev.iestyn129.femtoapi.response.IResponse
+import dev.iestyn129.femtoapi.api.response.IResponse
 import dev.iestyn129.tynlog.TynLog
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.reflect.full.memberFunctions
 
 fun KFunction<*>.getMethods(): List<Pair<String, Method>> = annotations.mapNotNull { when (it) {
@@ -31,7 +21,7 @@ fun KFunction<*>.getMethods(): List<Pair<String, Method>> = annotations.mapNotNu
 	else -> null
 } }
 
-class URIMap(femtoAPI: FemtoAPI) {
+class EndpointHandler(femtoAPI: FemtoAPI) {
 	private val methodURIMap: Map<Method, Map<String, KFunction<*>>>
 
 	init {
@@ -45,17 +35,19 @@ class URIMap(femtoAPI: FemtoAPI) {
 			)
 
 		femtoClass.memberFunctions.forEach { it.getMethods().forEach { (uri: String, method: Method) ->
-			if (
-				it.parameters.size == 2 &&
+			if (it.parameters.size == 2 &&
+				it.parameters[0].type.classifier == femtoClass &&
 				it.parameters[1].type.classifier == HTTPSession::class &&
-				(it.returnType.classifier == HTTPResponse::class || it.returnType.classifier == IResponse::class)
+				it.returnType.classifier == IResponse::class
 			) {
 				if (!methodURIMap.containsKey(method))
 					methodURIMap[method] = mutableMapOf()
 
-				@Suppress("UNCHECKED_CAST")
 				methodURIMap[method]?.put(uri, it)
-			}
+			} else throw IllegalStateException(
+				"Function `${femtoClass.simpleName}.${it.name}` for endpoint \"$uri\" " +
+				"must match signature: `(HTTPSession) -> IResponse`"
+			)
 		} }
 
 		this.methodURIMap = methodURIMap
