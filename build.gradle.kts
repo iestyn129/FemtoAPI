@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "dev.iestyn129.femtoapi"
-version = "0.1.2"
+version = "0.1.3"
 
 layout.buildDirectory = file("out")
 

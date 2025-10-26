@@ -40,10 +40,16 @@ class EndpointHandler(femtoAPI: FemtoAPI) {
 				it.parameters[1].type.classifier == HTTPSession::class &&
 				it.returnType.classifier == IResponse::class
 			) {
-				if (!methodURIMap.containsKey(method))
-					methodURIMap[method] = mutableMapOf()
+				val uriMap: MutableMap<String, KFunction<*>> = methodURIMap.getOrPut(method) {
+					mutableMapOf()
+				}
 
-				methodURIMap[method]?.put(uri, it)
+				if (uriMap.containsKey(uri)) throw IllegalStateException(
+					"Function `${femtoClass.simpleName}.${it.name}` for endpoint \"$uri\" " +
+					"is already used by `${femtoClass.simpleName}.${uriMap[uri]!!.name}`"
+				)
+
+				uriMap[uri] = it
 			} else throw IllegalStateException(
 				"Function `${femtoClass.simpleName}.${it.name}` for endpoint \"$uri\" " +
 				"must match signature: `(HTTPSession) -> IResponse`"

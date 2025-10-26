@@ -13,9 +13,11 @@ import java.io.File
 
 class TestAPI() : FemtoAPI("127.0.0.1") {
 	@GET("/")
+	@GET("/index")
+	@GET("/index.txt")
 	fun root(session: HTTPSession): IResponse = TextResponse(
 		StatusCode.OK,
-		"Hi from '${session.uri}'!\n" +
+		"Hi from '${session.uri.path}'!\n" +
 		"The method you're using is ${session.method}."
 	)
 
@@ -26,6 +28,12 @@ class TestAPI() : FemtoAPI("127.0.0.1") {
 		"<body>" +
 		"	<h1>HEADER!!!</h1>" +
 		"</body>"
+	)
+
+	@GET("/query")
+	fun query(session: HTTPSession): IResponse = TextResponse(
+		StatusCode.OK,
+		session.query.toString()
 	)
 
 	@GET("/json")
@@ -61,5 +69,5 @@ fun main() {
 	api.start()
 	Runtime.getRuntime().addShutdownHook(Thread {
 		api.stop()
-	})
+	} )
 }
