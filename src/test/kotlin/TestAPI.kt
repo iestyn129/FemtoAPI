@@ -53,7 +53,7 @@ fun main() {
 	TynLog.init(TynConfig(
 		debug = true,
 		logFolder = LogFolderConfig(
-			folder = File("test/log")
+			folder = File("src/test/log")
 		)
 	))
 
