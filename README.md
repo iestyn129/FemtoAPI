@@ -1,6 +1,10 @@
 # FemtoAPI
 A super tiny and super simple HTTP server and API framework designed for only basic needs of me (iestyn129).
 
+<a href="https://brainmade.org">
+	<img src="https://brainmade.org/white-logo.svg" alt="Brainmade Logo" width="160"/>
+</a>
+
 ## Building
 TynLog is written in Kotlin 2.2.20 on Java 8, using Gradle 8.14.
 I'm still new to Gradle, so don't expect perfection.
