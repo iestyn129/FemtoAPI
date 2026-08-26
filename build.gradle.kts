@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.iestyn129.femtoapi"
-version = "0.1.3"
+version = "0.1.4"
 
 layout.buildDirectory = file("out")
 
@@ -13,7 +13,6 @@ repositories {
 }
 
 dependencies {
-	implementation(kotlin("reflect:${kotlin.coreLibrariesVersion}"))
 	implementation("dev.iestyn129.tynlog:tynlog:0.1.3")
 }
 

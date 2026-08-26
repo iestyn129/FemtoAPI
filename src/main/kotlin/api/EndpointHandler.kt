@@ -5,59 +5,59 @@ import dev.iestyn129.femtoapi.HTTPSession
 import dev.iestyn129.femtoapi.Method
 import dev.iestyn129.femtoapi.api.response.IResponse
 import dev.iestyn129.tynlog.TynLog
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.full.memberFunctions
+import java.lang.reflect.Method as JMethod
 
-fun KFunction<*>.getMethods(): List<Pair<String, Method>> = annotations.mapNotNull { when (it) {
-	is CONNECT -> it.uri to Method.CONNECT
-	is DELETE -> it.uri to Method.DELETE
-	is GET -> it.uri to Method.GET
-	is HEAD -> it.uri to Method.HEAD
-	is OPTIONS -> it.uri to Method.OPTIONS
-	is PATCH -> it.uri to Method.PATCH
-	is POST -> it.uri to Method.POST
-	is TRACE -> it.uri to Method.TRACE
-	else -> null
-} }
+fun JMethod.getMethods(): List<Pair<String, Method>> = buildList {
+	addAll(getAnnotationsByType(CONNECT::class.java).map { it.uri to Method.CONNECT })
+	addAll(getAnnotationsByType(DELETE::class.java).map { it.uri to Method.DELETE })
+	addAll(getAnnotationsByType(GET::class.java).map { it.uri to Method.GET })
+	addAll(getAnnotationsByType(HEAD::class.java).map { it.uri to Method.HEAD })
+	addAll(getAnnotationsByType(OPTIONS::class.java).map { it.uri to Method.OPTIONS })
+	addAll(getAnnotationsByType(PATCH::class.java).map { it.uri to Method.PATCH })
+	addAll(getAnnotationsByType(POST::class.java).map { it.uri to Method.POST })
+	addAll(getAnnotationsByType(TRACE::class.java).map { it.uri to Method.TRACE })
+}
 
 class EndpointHandler(femtoAPI: FemtoAPI) {
-	private val methodURIMap: Map<Method, Map<String, KFunction<*>>>
+	private val methodURIMap: Map<Method, Map<String, JMethod>>
 
 	init {
-		val methodURIMap: MutableMap<Method, MutableMap<String, KFunction<*>>> = mutableMapOf()
+		val methodURIMap: MutableMap<Method, MutableMap<String, JMethod>> = mutableMapOf()
 
-		val femtoClass: KClass<out FemtoAPI> = femtoAPI::class
-		if (femtoClass == FemtoAPI::class)
+		val femtoClass: Class<FemtoAPI> = femtoAPI.javaClass
+		if (femtoClass == FemtoAPI::class.java)
 			TynLog.warn(
 				"You are running the FemtoAPI class directly, " +
 				"to create any endpoints you must inherit from FemtoAPI"
 			)
 
-		femtoClass.memberFunctions.forEach { it.getMethods().forEach { (uri: String, method: Method) ->
-			if (it.parameters.size == 2 &&
-				it.parameters[0].type.classifier == femtoClass &&
-				it.parameters[1].type.classifier == HTTPSession::class &&
-				it.returnType.classifier == IResponse::class
-			) {
-				val uriMap: MutableMap<String, KFunction<*>> = methodURIMap.getOrPut(method) {
-					mutableMapOf()
-				}
+		femtoClass.methods.forEach { method ->
+			method.getMethods().forEach { (uri, httpMethod) ->
+				val parameters = method.parameterTypes
 
-				if (uriMap.containsKey(uri)) throw IllegalStateException(
-					"Function `${femtoClass.simpleName}.${it.name}` for endpoint \"$uri\" " +
-					"is already used by `${femtoClass.simpleName}.${uriMap[uri]!!.name}`"
+				if (parameters.size == 1 &&
+					parameters[0] == HTTPSession::class.java &&
+					method.returnType == IResponse::class.java
+				) {
+					val uriMap = methodURIMap.getOrPut(httpMethod) {
+						mutableMapOf()
+					}
+
+					if (uriMap.containsKey(uri)) throw IllegalStateException(
+						"Function `${femtoClass.simpleName}.${method.name}` for endpoint \"$uri\" " +
+						"is already used by `${femtoClass.simpleName}.${uriMap[uri]!!.name}`"
+					)
+
+					uriMap[uri] = method
+				} else throw IllegalStateException(
+					"Function `${femtoClass.simpleName}.${method.name}` for endpoint \"$uri\" " +
+					"must match signature: `(HTTPSession) -> IResponse`"
 				)
-
-				uriMap[uri] = it
-			} else throw IllegalStateException(
-				"Function `${femtoClass.simpleName}.${it.name}` for endpoint \"$uri\" " +
-				"must match signature: `(HTTPSession) -> IResponse`"
-			)
-		} }
+			}
+		}
 
 		this.methodURIMap = methodURIMap
 	}
 
-	fun get(method: Method, uri: String): KFunction<*>? = methodURIMap[method]?.get(uri)
+	fun get(method: Method, uri: String): JMethod? = methodURIMap[method]?.get(uri)
 }

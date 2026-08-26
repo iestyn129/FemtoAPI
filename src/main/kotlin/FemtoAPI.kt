@@ -15,7 +15,7 @@ import java.net.URI
 import kotlin.concurrent.thread
 
 private const val DEFAULT_PORT: Int = 8080
-const val FEMTO_API_VERSION: String = "0.1.0"
+const val FEMTO_API_VERSION: String = "0.1.4"
 
 open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 	constructor(host: String, port: Int) : this(InetSocketAddress(host, port))
@@ -30,7 +30,7 @@ open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 	private val endpointHandler: EndpointHandler = EndpointHandler(this)
 
 	fun start() {
-		TynLog.info("Running FemtoAPI at http://${hostname.hostName}:${hostname.port}")
+		TynLog.info("Running FemtoAPI at http://${hostname.hostString}:${hostname.port}")
 		serverSocket.bind(hostname)
 
 		thread { while (!serverSocket.isClosed) { try {
@@ -72,7 +72,7 @@ open class FemtoAPI(private val hostname: InetSocketAddress) : Closeable {
 						StatusCode.HTTPVersionNotSupported
 					)
 
-					val response: Any = endpointHandler.get(method, uri.path)?.call(
+					val response: Any = endpointHandler.get(method, uri.path)?.invoke(
 						this,
 						HTTPSession(uri, method, protocol, input)
 					) ?: throw HTTPException(
